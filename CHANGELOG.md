@@ -7,5 +7,6 @@
 
  ## [0.0.1] - 2022-08-27
 ### ADDED
- - Pillow extension to manipulate images
- - Changed List[UploadFile] to list[bytes]
+    - Controller.py to handle image services
+    - Saving and opening images from file buffer
+     
