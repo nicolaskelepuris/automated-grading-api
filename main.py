@@ -33,9 +33,7 @@ async def create_upload_file(files: list[UploadFile]):
       with open(f"{fullpath}\\{file.filename}", "wb") as f:
         f.write(contents)
       filesList.append(contents)
-      finalImg = controller.read(f"{fullpath}\\{file.filename}")
-      controller.show(f'{file.filename}', finalImg)
-      controller.wait(0)
+      finalImg = controller.proccess((f"{fullpath}\\{file.filename}", file.filename))
     return {"uploadStatus" : "Complete"}
 
 

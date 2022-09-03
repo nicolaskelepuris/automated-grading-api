@@ -2,6 +2,12 @@ import numpy as np
 import cv2
 
 
+def proccess(fullpath, filename):
+    finalImg = read(f"{fullpath}\\{filename}")
+    show(f'{filename}', finalImg)
+    wait(0)
+    return
+
 def read(path):
     return cv2.imread(path)
 
