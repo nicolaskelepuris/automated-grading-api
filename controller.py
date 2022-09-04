@@ -4,14 +4,10 @@ import cv2
 ## constants ##
 width = 800
 height = 600
-
-answers = [0, 1, 2, 1, 3, 4, 0, 2, 4, 3]
-choices = 5
-questions_count = len(answers)
-
 ###
 
-def proccess(exams = ["./images/modif.jpg"]):
+def proccess(exams = ["./images/modif.jpg"], answers = [0, 1, 2, 1, 3, 4, 0, 2, 4, 3], choices_count = 5):
+    questions_count = len(answers)
     if isinstance(exams[0], str):
         original_img = cv2.imread(exams[0])
     else:
@@ -21,12 +17,12 @@ def proccess(exams = ["./images/modif.jpg"]):
 
     black_and_white_img = tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points)
 
-    black_and_white_answers = split_answer_options(black_and_white_img)
+    black_and_white_answers = split_answer_options(black_and_white_img, questions_count, choices_count)
 
-    processed_answers = process_answers(black_and_white_answers)
+    processed_answers = process_answers(black_and_white_answers, questions_count, choices_count)
     print("USER ANSWERS:", processed_answers)
 
-    correct_answers_count = get_correct_answers_count(processed_answers)
+    correct_answers_count = get_correct_answers_count(processed_answers, answers)
     #print("correct_answers_count:", correct_answers_count)
 
     score = (correct_answers_count / questions_count) * 100
@@ -35,19 +31,19 @@ def proccess(exams = ["./images/modif.jpg"]):
     cv2.waitKey(0)
     return
 
-def get_correct_answers_count(processed_answers):    
-    return sum(1 for i in range(0, questions_count) if answers[i] == processed_answers[i])
+def get_correct_answers_count(processed_answers, answers):   
+    return sum(1 for i in range(0, len(answers)) if answers[i] == processed_answers[i])
 
-def process_answers(answer_options):
+def process_answers(answer_options, questions_count, choices_count):
     row = 0
     column = 0
 
-    answer_options_non_zero_pixels_count = np.zeros((questions_count,choices)) # TO STORE THE NON ZERO VALUES OF EACH BOX
+    answer_options_non_zero_pixels_count = np.zeros((questions_count, choices_count)) # TO STORE THE NON ZERO VALUES OF EACH BOX
     for image in answer_options:
         totalPixels = cv2.countNonZero(image)
         answer_options_non_zero_pixels_count[row][column]= totalPixels
         column += 1
-        if (column == choices):
+        if (column == choices_count):
             column = 0; row += 1
 
     processed_answers=[]
@@ -101,17 +97,17 @@ def get_biggest_rectangle(contours):
 
     return max_value[1]
 
-def split_answer_options(img):
-    rows = np.vsplit(img, len(answers))
-    boxes=[]
+def split_answer_options(img, questions_count, choices_count):
+    rows = np.vsplit(img, questions_count)
+    options = []
     for r in rows:
-        cols= np.hsplit(r,choices)
+        cols = np.hsplit(r, choices_count)
         for box in cols:
-            boxes.append(box)
-    return boxes
+            options.append(box)
+
+    return options
 
 def reorder(myPoints):
-
     myPoints = myPoints.reshape((4, 2)) # REMOVE EXTRA BRACKET
     #print(myPoints)
     myPointsNew = np.zeros((4, 1, 2), np.int32) # NEW MATRIX WITH ARRANGED POINTS
