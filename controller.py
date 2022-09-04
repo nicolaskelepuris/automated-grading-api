@@ -34,24 +34,27 @@ def proccess(exams = ["./images/modif.jpg"], answers = [0, 1, 2, 1, 3, 4, 0, 2, 
 def get_correct_answers_count(processed_answers, answers):   
     return sum(1 for i in range(0, len(answers)) if answers[i] == processed_answers[i])
 
-def process_answers(answer_options, questions_count, choices_count):
-    row = 0
-    column = 0
+def process_answers(answer_options, questions_count, choices_count):    
+    choices_non_zero_pixels_count = list(map(count_non_zero_pixels, answer_options))
+    questions = separate_in_questions(choices_non_zero_pixels_count, questions_count, choices_count)
 
-    answer_options_non_zero_pixels_count = np.zeros((questions_count, choices_count)) # TO STORE THE NON ZERO VALUES OF EACH BOX
-    for image in answer_options:
-        totalPixels = cv2.countNonZero(image)
-        answer_options_non_zero_pixels_count[row][column]= totalPixels
-        column += 1
-        if (column == choices_count):
-            column = 0; row += 1
+    return list(map(get_answer_index, questions))
 
-    processed_answers=[]
-    for x in range (0,questions_count):
-        arr = answer_options_non_zero_pixels_count[x]
-        myIndexVal = np.where(arr == np.amax(arr))
-        processed_answers.append(myIndexVal[0][0])
-    return processed_answers
+def count_non_zero_pixels(image):
+    return cv2.countNonZero(image)
+
+def get_answer_index(question_answers):
+    return question_answers.index(max(question_answers))
+
+def separate_in_questions(answer_options_non_zero_pixels_count, questions_count, choices_count):
+    result = []
+    for i in range (0, questions_count):
+        start_of_question = choices_count * i
+        end_of_question = start_of_question + choices_count
+        result.append(answer_options_non_zero_pixels_count[start_of_question : end_of_question])
+
+    return result
+
 
 def tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points):
     corners = np.float32(answers_frame_corner_points)
@@ -78,24 +81,35 @@ def find_answers_frame_corner_points(original_img):
 
     return gray_img, answers_frame_corner_points
 
-def get_corner_points(cont):
-    peri = cv2.arcLength(cont, True) # LENGTH OF CONTOUR
-    approx = cv2.approxPolyDP(cont, 0.02 * peri, True) # APPROXIMATE THE POLY TO GET CORNER POINTS
-    return approx
+def get_corner_points(contours):
+    perimeter = cv2.arcLength(contours, True)
+    corner_points = cv2.approxPolyDP(contours, 0.02 * perimeter, True)
+
+    return corner_points
 
 def get_biggest_rectangle(contours):
     max_value = [0, 0] #area, contorno
     
-    for i in contours:
-        if cv2.contourArea(i) > 50:
-            perimeter = cv2.arcLength(i, True)
-            corners = cv2.approxPolyDP(i, 0.02 * perimeter, True)
-            if len(corners) == 4:
-                area = cv2.contourArea(i)
-                if area > max_value[0]:
-                    max_value = [area, i]
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if not has_min_area(area): continue
+        if not is_rectangle(contour): continue
+
+        if area > max_value[0]:
+            max_value = [area, contour]
 
     return max_value[1]
+
+def to_area_and_contour(contour):
+    [cv2.contourArea(contour), contour]
+
+def has_min_area(area):
+    return area > 50
+
+def is_rectangle(contour):
+    perimeter = cv2.arcLength(contour, True)
+    corners = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+    return len(corners) == 4
 
 def split_answer_options(img, questions_count, choices_count):
     rows = np.vsplit(img, questions_count)
