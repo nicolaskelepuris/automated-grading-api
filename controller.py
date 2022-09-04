@@ -17,34 +17,34 @@ def proccess(exams = ["./images/modif.jpg"]):
     else:
         original_img = cv2.imdecode(exams[0], cv2.IMREAD_UNCHANGED)
     
-    resized_img = cv2.resize(original_img, (width, height))
+    gray_img, answers_frame_corner_points = find_answers_frame_corner_points(original_img)
 
-    gray_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY) #2
-    blur_img = cv2.GaussianBlur(gray_img, (7,7),1)
-    canny_img = cv2.Canny(blur_img, 50, 50)
+    black_and_white_img = tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points)
 
-    contours, _ = cv2.findContours(canny_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    answers_frame_contours = get_biggest_rectangle(contours)
-    answers_frame_corner_points = get_corner_points(answers_frame_contours)
-    #imgFinal = resized_img.copy()
+    black_and_white_answers = split_answer_options(black_and_white_img)
 
-    #cv2.drawContours(imgFinal, biggestPoints, -1, (0, 255, 0), 20)
-    #cv2.drawContours(imgFinal, contours, -1, (0, 255, 0), 20)
-    #cv2.imshow('imgfinal', imgFinal)
+    processed_answers = process_answers(black_and_white_answers)
+    print("USER ANSWERS", processed_answers)
 
-    answers_frame_corner_points = reorder(answers_frame_corner_points) # REORDER FOR WARPING
-    #cv2.drawContours(imgFinal, biggest_rectangle_corner_points, -1, (0, 255, 0), 20) # DRAW THE BIGGEST CONTOUR
-    pts1 = np.float32(answers_frame_corner_points) # PREPARE POINTS FOR WARP
-    pts2 = np.float32([[0, 0],[width, 0], [0, height],[width, height]]) # PREPARE POINTS FOR WARP
+    grade = calculate_grade(processed_answers)
+    #print("GRADING",grading)
 
-    matrix = cv2.getPerspectiveTransform(pts1, pts2) # GET TRANSFORMATION MATRIX
-    warp_img = cv2.warpPerspective(gray_img, matrix, (width, height))
-    
-    threshold_img = cv2.threshold(warp_img, 170, 255,cv2.THRESH_BINARY_INV )[1]
-    #cv2.imshow('threshold img', threshold_img)
+    score = (sum(grade) / questions) * 100
+    print(score)
 
-    answer_options = split_answer_options(threshold_img) # GET INDIVIDUAL BOXES
+    cv2.waitKey(0)
+    return
 
+def calculate_grade(processed_answers):
+    grading=[]
+    for x in range(0,questions):
+        if answers[x] == processed_answers[x]:
+            grading.append(1)
+        else:
+            grading.append(0)
+    return grading
+
+def process_answers(answer_options):
     row = 0
     column = 0
 
@@ -63,22 +63,32 @@ def proccess(exams = ["./images/modif.jpg"]):
         arr = answer_options_non_zero_pixels_count[x]
         myIndexVal = np.where(arr == np.amax(arr))
         processed_answers.append(myIndexVal[0][0])
-    print("USER ANSWERS",processed_answers)
-    #print("GABARITO    ", answers)
+    return processed_answers
 
-    grading=[]
-    for x in range(0,questions):
-        if answers[x] == processed_answers[x]:
-            grading.append(1)
-        else:
-            grading.append(0)
-    #print("GRADING",grading)
+def tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points):
+    corners = np.float32(answers_frame_corner_points)
+    original_corners = np.float32([[0, 0],[width, 0], [0, height],[width, height]])
 
-    score = (sum(grading)/questions) * 100 # FINAL GRADE
-    print(score)
+    matrix = cv2.getPerspectiveTransform(corners, original_corners)
+    warp_img = cv2.warpPerspective(gray_img, matrix, (width, height))
+    
+    threshold_img = cv2.threshold(warp_img, 170, 255, cv2.THRESH_BINARY_INV )[1]
+    #cv2.imshow('threshold img', threshold_img)
 
-    cv2.waitKey(0)
-    return
+    return threshold_img
+
+def find_answers_frame_corner_points(original_img):
+    resized_img = cv2.resize(original_img, (width, height))
+    gray_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
+    blur_img = cv2.GaussianBlur(gray_img, (7,7),1)
+    canny_img = cv2.Canny(blur_img, 50, 50)
+
+    contours, _ = cv2.findContours(canny_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    answers_frame_contours = get_biggest_rectangle(contours)
+
+    answers_frame_corner_points = reorder(get_corner_points(answers_frame_contours))
+
+    return gray_img, answers_frame_corner_points
 
 def get_corner_points(cont):
     peri = cv2.arcLength(cont, True) # LENGTH OF CONTOUR
