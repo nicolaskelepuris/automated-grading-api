@@ -7,7 +7,7 @@ height = 600
 
 answers = [0, 1, 2, 1, 3, 4, 0, 2, 4, 3]
 choices = 5
-questions = len(answers)
+questions_count = len(answers)
 
 ###
 
@@ -24,42 +24,34 @@ def proccess(exams = ["./images/modif.jpg"]):
     black_and_white_answers = split_answer_options(black_and_white_img)
 
     processed_answers = process_answers(black_and_white_answers)
-    print("USER ANSWERS", processed_answers)
+    print("USER ANSWERS:", processed_answers)
 
-    grade = calculate_grade(processed_answers)
-    #print("GRADING",grading)
+    correct_answers_count = get_correct_answers_count(processed_answers)
+    #print("correct_answers_count:", correct_answers_count)
 
-    score = (sum(grade) / questions) * 100
-    print(score)
+    score = (correct_answers_count / questions_count) * 100
+    print("score:", score)
 
     cv2.waitKey(0)
     return
 
-def calculate_grade(processed_answers):
-    grading=[]
-    for x in range(0,questions):
-        if answers[x] == processed_answers[x]:
-            grading.append(1)
-        else:
-            grading.append(0)
-    return grading
+def get_correct_answers_count(processed_answers):    
+    return sum(1 for i in range(0, questions_count) if answers[i] == processed_answers[i])
 
 def process_answers(answer_options):
     row = 0
     column = 0
 
-    answer_options_non_zero_pixels_count = np.zeros((questions,choices)) # TO STORE THE NON ZERO VALUES OF EACH BOX
+    answer_options_non_zero_pixels_count = np.zeros((questions_count,choices)) # TO STORE THE NON ZERO VALUES OF EACH BOX
     for image in answer_options:
         totalPixels = cv2.countNonZero(image)
         answer_options_non_zero_pixels_count[row][column]= totalPixels
         column += 1
         if (column == choices):
             column = 0; row += 1
-    
-    #cv2.imshow('boxes', boxes[4])
 
     processed_answers=[]
-    for x in range (0,questions):
+    for x in range (0,questions_count):
         arr = answer_options_non_zero_pixels_count[x]
         myIndexVal = np.where(arr == np.amax(arr))
         processed_answers.append(myIndexVal[0][0])
