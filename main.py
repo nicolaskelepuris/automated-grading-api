@@ -1,19 +1,7 @@
-from itertools import count
-from urllib import request
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-import controller
-import os 
-
-
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-isdir = os.path.isdir(f'{dir_path}\\images')
-
-if not isdir:
-  IMAGEDIR = os.mkdir(f'{dir_path}\\images')
-
-fullpath = os.path.join(dir_path, "images")
+from controller import proccess
+import numpy as np
 
 app = FastAPI()
 filesList = []
@@ -28,15 +16,8 @@ app.add_middleware(
 
 @app.post("/upload-file") 
 async def create_upload_file(files: list[UploadFile]):
-    for file in files:
-      contents = await file.read()
-      with open(f"{fullpath}\\{file.filename}", "wb") as f:
-        f.write(contents)
-      filesList.append(contents)
-      finalImg = controller.proccess((f"{fullpath}\\{file.filename}", file.filename))
-    return {"uploadStatus" : "Complete"}
+    proccess(list(map(to_bytes, files)))
+    return { "uploadStatus" : "Complete" }
 
-
-
-      #img = Image.open(io.BytesIO(im))
-      #print([f"Name: {file.filename}" for file in files])
+def to_bytes(file: UploadFile):
+    return np.fromstring(file.file.read(), np.uint8)

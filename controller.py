@@ -11,8 +11,12 @@ questions = len(answers)
 
 ###
 
-def proccess(path_gabarito = "./images/gabarito_NICOLAU.jpg", path_alunos = [  "./images/modif.jpg" ]):
-    original_img = cv2.imread(path_alunos[0]) #1
+def proccess(exams = ["./images/modif.jpg"]):
+    if isinstance(exams[0], str):
+        original_img = cv2.imread(exams[0])
+    else:
+        original_img = cv2.imdecode(exams[0], cv2.IMREAD_UNCHANGED)
+    
     resized_img = cv2.resize(original_img, (width, height))
 
     gray_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY) #2
