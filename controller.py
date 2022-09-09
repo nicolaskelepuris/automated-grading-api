@@ -6,13 +6,40 @@ width = 800
 height = 600
 ###
 
-def proccess(exams = ["./images/modif.jpg"], answers = [0, 1, 2, 1, 3, 4, 0, 2, 4, 3], choices_count = 5):
-    questions_count = len(answers)
-    if isinstance(exams[0], str):
-        original_img = cv2.imread(exams[0])
-    else:
-        original_img = cv2.imdecode(exams[0], cv2.IMREAD_UNCHANGED)
-    
+def process(exams = ["./images/modif.jpg"], correct_answers = [0, 1, 2, 1, 3, 4, 0, 2, 4, 3], choices_per_question_count = 5):
+    questions_count = len(correct_answers)
+    print("correct_answers", correct_answers)
+
+    exams_answers = process_exams(exams, choices_per_question_count, questions_count)
+    print("exams_answers:", exams_answers)
+
+    compared_answers = compare_exams_to_answers(exams_answers, correct_answers)
+    print("compared_answers:", compared_answers)
+
+    scores = calculate_scores(questions_count, compared_answers)
+    print("scores:", scores)
+
+    cv2.waitKey(0)
+    return
+
+def calculate_scores(questions_count, compared_answers):
+    scores = list(map(lambda processed_exam: (sum(1 for i in range(0, len(processed_exam)) if processed_exam[i]) / questions_count) * 100, compared_answers))
+    return scores
+
+def process_exams(exams, choices_count, questions_count):
+    exams_answers = []
+    for exam in exams:
+        if isinstance(exam, str):
+            original_img = cv2.imread(exam)
+        else:
+            original_img = cv2.imdecode(exam, cv2.IMREAD_UNCHANGED)
+        
+        result = process_image(choices_count, questions_count, original_img)
+
+        exams_answers.append(result)
+    return exams_answers
+
+def process_image(choices_count, questions_count, original_img):
     gray_img, answers_frame_corner_points = find_answers_frame_corner_points(original_img)
 
     black_and_white_img = tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points)
@@ -20,19 +47,14 @@ def proccess(exams = ["./images/modif.jpg"], answers = [0, 1, 2, 1, 3, 4, 0, 2, 
     black_and_white_answers = split_answer_options(black_and_white_img, questions_count, choices_count)
 
     processed_answers = process_answers(black_and_white_answers, questions_count, choices_count)
-    print("USER ANSWERS:", processed_answers)
+    return processed_answers
 
-    correct_answers_count = get_correct_answers_count(processed_answers, answers)
-    #print("correct_answers_count:", correct_answers_count)
+def compare_exams_to_answers(processed_answers, answers):
+    return list(map(lambda a: list(compare_exam(a, answers)), processed_answers))
 
-    score = (correct_answers_count / questions_count) * 100
-    print("score:", score)
-
-    cv2.waitKey(0)
-    return
-
-def get_correct_answers_count(processed_answers, answers):   
-    return sum(1 for i in range(0, len(answers)) if answers[i] == processed_answers[i])
+def compare_exam(exam_answers, answers):
+    for i in range(0, len(answers)):
+        yield answers[i] == exam_answers[i]
 
 def process_answers(answer_options, questions_count, choices_count):    
     choices_non_zero_pixels_count = list(map(count_non_zero_pixels, answer_options))
@@ -136,4 +158,4 @@ def reorder(myPoints):
 
     return myPointsNew
 
-proccess()
+process()
