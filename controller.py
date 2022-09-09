@@ -138,24 +138,24 @@ def split_answer_options(img, questions_count, choices_count):
     options = []
     for r in rows:
         cols = np.hsplit(r, choices_count)
-        for box in cols:
-            options.append(box)
+        for choice_option in cols:
+            options.append(choice_option)
 
     return options
 
-def reorder(myPoints):
-    myPoints = myPoints.reshape((4, 2)) # REMOVE EXTRA BRACKET
-    #print(myPoints)
-    myPointsNew = np.zeros((4, 1, 2), np.int32) # NEW MATRIX WITH ARRANGED POINTS
-    add = myPoints.sum(1)
-    #print(add)
-    #print(np.argmax(add))
-    myPointsNew[0] = myPoints[np.argmin(add)]  #[0,0]
-    myPointsNew[3] =myPoints[np.argmax(add)]   #[w,h]
-    diff = np.diff(myPoints, axis=1)
-    myPointsNew[1] =myPoints[np.argmin(diff)]  #[w,0]
-    myPointsNew[2] = myPoints[np.argmax(diff)] #[h,0]
+def reorder(contours):
+    contours = contours.reshape((4, 2)) # Format to an array of 4 contours (each one is an array of 2 values)
 
-    return myPointsNew
+    reordered = np.zeros((4, 1, 2), np.int32) # Initialize result with zeros
+
+    sum = contours.sum(1)
+    reordered[0] = contours[np.argmin(sum)]  # bottom left
+    reordered[3] = contours[np.argmax(sum)]   # top right
+
+    diff = np.diff(contours, axis=1)
+    reordered[1] = contours[np.argmin(diff)]  # bottom right
+    reordered[2] = contours[np.argmax(diff)] # top left
+
+    return reordered
 
 process()
