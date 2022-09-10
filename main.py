@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from controller import process
 import numpy as np
@@ -15,9 +15,9 @@ app.add_middleware(
 )
 
 @app.post("/upload-file") 
-async def create_upload_file(files: list[UploadFile]):
-    process(list(map(to_bytes, files)))
-    return { "uploadStatus" : "Complete" }
+async def create_upload_file(files: list[UploadFile], choicesCount: int = Form(5)):
+  process(list(map(to_bytes, files)))
+  return { "uploadStatus" : "Complete" }
 
 def to_bytes(file: UploadFile):
-    return np.fromstring(file.file.read(), np.uint8)
+  return np.fromstring(file.file.read(), np.uint8)
