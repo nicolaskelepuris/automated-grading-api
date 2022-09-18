@@ -17,8 +17,7 @@ app.add_middleware(
 
 @app.post("/upload-file") 
 async def create_upload_file(files: list[UploadFile], choicesCount: int = Form(5), correctAnswers: str = Form('[]')):
-  process(list(map(to_bytes, files)), correct_answers = json.loads(correctAnswers), choices_per_question_count = choicesCount)
-  return { "uploadStatus" : "Complete" }
+  return process(list(map(to_bytes, files)), correct_answers = json.loads(correctAnswers), choices_per_question_count = choicesCount)
 
 def to_bytes(file: UploadFile):
   return np.fromstring(file.file.read(), np.uint8)
