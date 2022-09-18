@@ -20,7 +20,7 @@ def process(exams = ["./images/modif.jpg"], correct_answers = [0, 1, 2, 1, 3, 4,
     print("scores:", scores)
     format_answers(compared_answers)
 
-    cv2.waitKey(0)
+    # cv2.waitKey(0)
     return { "data": list(map(format_answers, compared_answers)) }
 
 def calculate_scores(questions_count, compared_answers):
@@ -101,8 +101,8 @@ def find_answers_frame_corner_points(original_img):
     canny_img = cv2.Canny(blur_img, 50, 50)
 
     contours, _ = cv2.findContours(canny_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    cv2.drawContours(resized_img, contours, -1, (0, 255, 0), 10)
-    cv2.imshow("original_img,", resized_img)
+    # cv2.drawContours(resized_img, contours, -1, (0, 255, 0), 10)
+    # cv2.imshow("original_img,", resized_img)
     answers_frame_contours = get_biggest_rectangle(contours)
 
     answers_frame_corner_points = reorder(get_corner_points(answers_frame_contours))
