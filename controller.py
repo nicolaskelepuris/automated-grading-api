@@ -2,56 +2,73 @@ import numpy as np
 import cv2
 
 ## constants ##
-width = 800
-height = 600
+width = 750
+height = 1000
+id_digits_options = 5
 ###
 
-def process(exams = ["./images/modif.jpg"], correct_answers = [0, 1, 2, 1, 3, 4, 0, 2, 4, 3], choices_per_question_count = 5):
+def process(exams = ["./images/prova_com_matricula.jpg"], correct_answers = [3, 1, 0, 1, 2, 3, 4, 3, 4, 0], choices_per_question_count = 5, id_digits_count = 10):
     questions_count = len(correct_answers)
     print("correct_answers", correct_answers)
 
-    exams_answers = process_exams(exams, choices_per_question_count, questions_count)
-    print("exams_answers:", exams_answers)
+    processed_exams = process_exams(exams, choices_per_question_count, questions_count, id_digits_count)
+    answers = list(map(lambda p: p[0], processed_exams))
+    ids = list(map(lambda p: p[1], processed_exams))
+    print("exams_answers:", answers)
+    print("exams_ids:", ids)
 
-    compared_answers = compare_exams_to_answers(exams_answers, correct_answers)
+    compared_answers = compare_exams_to_answers(answers, correct_answers)
     print("compared_answers:", compared_answers)
 
     scores = calculate_scores(questions_count, compared_answers)
     print("scores:", scores)
-    format_answers(compared_answers)
+
+    compared_answers_and_ids = []
+    for i, x in enumerate(compared_answers):
+        compared_answers_and_ids.append({ "compared_answers": x, "id": ids[i] })
 
     # cv2.waitKey(0)
-    return { "data": list(map(format_answers, compared_answers)) }
+    return { "data": list(map(format_answers, compared_answers_and_ids)) }
 
 def calculate_scores(questions_count, compared_answers):
     scores = list(map(lambda processed_exam: (sum(1 for i in range(0, len(processed_exam)) if processed_exam[i]) / questions_count) * 100, compared_answers))
     return scores
 
 def format_answers(processed_exam):
-    return { "compared_answers": processed_exam, "correct_count": sum(1 for i in range(0, len(processed_exam)) if processed_exam[i]) }
+    return {
+        "compared_answers": processed_exam["compared_answers"],
+        "correct_count": sum(1 for i in range(0, len(processed_exam["compared_answers"])) if processed_exam["compared_answers"][i]),
+        "id": processed_exam["id"]
+    }
 
-def process_exams(exams, choices_count, questions_count):
-    exams_answers = []
+def process_exams(exams, choices_count, questions_count, id_digits_count):
+    result = []
     for exam in exams:
         if isinstance(exam, str):
             original_img = cv2.imread(exam)
         else:
             original_img = cv2.imdecode(exam, cv2.IMREAD_UNCHANGED)
         
-        result = process_image(choices_count, questions_count, original_img)
+        answers, id = process_image(choices_count, questions_count, original_img, id_digits_count)
 
-        exams_answers.append(result)
-    return exams_answers
+        result.append([answers, id])
 
-def process_image(choices_count, questions_count, original_img):
-    gray_img, answers_frame_corner_points = find_answers_frame_corner_points(original_img)
+    return result
 
-    black_and_white_img = tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points)
+def process_image(choices_count, questions_count, original_img, id_digits_count):
+    gray_img, answers_frame, id_frame = find_answers_and_id_frame_corner_points(original_img)
 
-    black_and_white_answers = split_answer_options(black_and_white_img, questions_count, choices_count)
+    processed_answers = frame_to_marked_options(gray_img, answers_frame, questions_count, choices_count)
 
-    processed_answers = process_answers(black_and_white_answers, questions_count, choices_count)
-    return processed_answers
+    processed_id = frame_to_marked_options(gray_img, id_frame, id_digits_count, id_digits_options)
+
+    return processed_answers, processed_id
+
+def frame_to_marked_options(gray_img, frame, rows_count, cols_count):
+    black_and_white_answers_frame_img = tranform_to_binary_black_and_white_img(gray_img, frame)
+    black_and_white_answers = split_rows_and_columns(black_and_white_answers_frame_img, rows_count, cols_count)
+
+    return process_answers(black_and_white_answers, rows_count, cols_count)
 
 def compare_exams_to_answers(processed_answers, answers):
     return list(map(lambda a: list(compare_exam(a, answers)), processed_answers))
@@ -94,20 +111,41 @@ def tranform_to_binary_black_and_white_img(gray_img, answers_frame_corner_points
 
     return threshold_img
 
-def find_answers_frame_corner_points(original_img):
+def find_answers_and_id_frame_corner_points(original_img):
     resized_img = cv2.resize(original_img, (width, height))
     gray_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2GRAY)
     blur_img = cv2.GaussianBlur(gray_img, (7,7),1)
     canny_img = cv2.Canny(blur_img, 50, 50)
 
     contours, _ = cv2.findContours(canny_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    # cv2.drawContours(resized_img, contours, -1, (0, 255, 0), 10)
+    # cv2.drawContours(resized_img, contours, -1, (0, 255, 0), 3)
     # cv2.imshow("original_img,", resized_img)
-    answers_frame_contours = get_biggest_rectangle(contours)
+    # cv2.waitKey()
+    frames = get_biggest_rectangles(contours)
+    # cv2.drawContours(resized_img, frames, -1, (0, 255, 0), 10)
+    # cv2.imshow("original_img,", resized_img)
+    # cv2.waitKey()
 
-    answers_frame_corner_points = reorder(get_corner_points(answers_frame_contours))
+    frames = list(map(lambda frame: reorder(get_corner_points(frame)), frames))
+    # cv2.drawContours(resized_img, frames, -1, (0, 255, 0), 10)
+    # cv2.imshow("original_img,", resized_img)
+    # cv2.waitKey()
 
-    return gray_img, answers_frame_corner_points
+    answers_frame, id_frame = separate_frames(frames)
+    # cv2.drawContours(resized_img, [answers_frame, id_frame], -1, (0, 255, 0), 10)
+    # cv2.imshow("original_img,", resized_img)
+    # cv2.waitKey()
+
+    return gray_img, answers_frame, id_frame
+
+def separate_frames(frames):
+    if frames[0][0][0][1] < frames[1][0][0][1]:
+        id_frame = frames[0]
+        answers_frame = frames[1]
+    else:
+        id_frame = frames[1]
+        answers_frame = frames[0]
+    return answers_frame, id_frame
 
 def get_corner_points(contours):
     perimeter = cv2.arcLength(contours, True)
@@ -115,18 +153,18 @@ def get_corner_points(contours):
 
     return corner_points
 
-def get_biggest_rectangle(contours):
-    max_value = [0, 0] #area, contorno
+def get_biggest_rectangles(contours):
+    rectangles = []
     
     for contour in contours:
         area = cv2.contourArea(contour)
         if not has_min_area(area): continue
         if not is_rectangle(contour): continue
 
-        if area > max_value[0]:
-            max_value = [area, contour]
+        rectangles.append([area, contour])
 
-    return max_value[1]
+    rectangles.sort(key = lambda k: k[0], reverse = True)
+    return list(map(lambda rectangle: rectangle[1], rectangles[:2]))
 
 def to_area_and_contour(contour):
     [cv2.contourArea(contour), contour]
@@ -139,7 +177,7 @@ def is_rectangle(contour):
     corners = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
     return len(corners) == 4
 
-def split_answer_options(img, questions_count, choices_count):
+def split_rows_and_columns(img, questions_count, choices_count):
     rows = np.vsplit(img, questions_count)
     options = []
     for r in rows:
