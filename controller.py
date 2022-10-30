@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 ## constants ##
-width = 852
+width = 850
 height = 1210
 id_digits_options = 10
 ###
@@ -191,6 +191,9 @@ def is_rectangle(contour):
 def split_rows_and_columns(img, questions_count, choices_count, ignore_first_column = False):
     if ignore_first_column:
         choices_count = choices_count + 1
+    
+    img = cv2.resize(img, (round(width / choices_count) * choices_count, round(height / questions_count) * questions_count))
+
     rows = np.vsplit(img, questions_count)
     options = []
     for r in rows:
