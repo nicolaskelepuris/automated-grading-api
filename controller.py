@@ -2,20 +2,27 @@ import numpy as np
 import cv2
 
 ## constants ##
-width = 750
-height = 1000
-id_digits_options = 5
+width = 852
+height = 1210
+id_digits_options = 10
 ###
-
-def process(exams = ["./images/prova_com_matricula.jpg"], correct_answers = [3, 1, 0, 1, 2, 3, 4, 3, 4, 0], choices_per_question_count = 5, id_digits_count = 10):
+# ["./images/p1.jpg", "./images/p2.jpg"]
+def process(exams = ["./images/p3.png"], correct_answers = [3, 1, 0, 1, 2, 3, 4, 3, 4, 0], choices_per_question_count = 5, id_digits_count = 9):
+    id_digits_count += 1 # adiciona 1 row que será ignorada (header Matrícula)
     questions_count = len(correct_answers)
     print("correct_answers", correct_answers)
 
     processed_exams = process_exams(exams, choices_per_question_count, questions_count, id_digits_count)
     answers = list(map(lambda p: p[0], processed_exams))
-    ids = list(map(lambda p: p[1], processed_exams))
+    ids = list(map(lambda p: p[1][1:], processed_exams))
     print("exams_answers:", answers)
+    print("p1:", [0, 0, 1, 2, 3, 4, 4, 4, 1, 2])
+    print("p2:", [1, 0, 0, 1, 3, 2, 4, 1, 3, 0])
+    print("p3:", [0, 1, 2, 1, 4, 3, 2, 0, 3, 4])
     print("exams_ids:", ids)
+    print("p1-id:", [2, 1, 1, 2, 9, 0, 1, 6, 4])
+    print("p2-id:", [0, 2, 1, 3, 5, 8, 7, 9, 4])
+    print("p3-id:", [0, 1, 2, 3, 9, 8, 6, 7, 4])
 
     compared_answers = compare_exams_to_answers(answers, correct_answers)
     print("compared_answers:", compared_answers)
@@ -58,15 +65,19 @@ def process_exams(exams, choices_count, questions_count, id_digits_count):
 def process_image(choices_count, questions_count, original_img, id_digits_count):
     gray_img, answers_frame, id_frame = find_answers_and_id_frame_corner_points(original_img)
 
-    processed_answers = frame_to_marked_options(gray_img, answers_frame, questions_count, choices_count)
+    processed_answers = frame_to_marked_options(gray_img, answers_frame, questions_count, choices_count, ignore_first_column = True)
 
     processed_id = frame_to_marked_options(gray_img, id_frame, id_digits_count, id_digits_options)
 
     return processed_answers, processed_id
 
-def frame_to_marked_options(gray_img, frame, rows_count, cols_count):
+def frame_to_marked_options(gray_img, frame, rows_count, cols_count, ignore_first_column = False):
     black_and_white_answers_frame_img = tranform_to_binary_black_and_white_img(gray_img, frame)
-    black_and_white_answers = split_rows_and_columns(black_and_white_answers_frame_img, rows_count, cols_count)
+
+    (h, w) = black_and_white_answers_frame_img.shape
+    black_and_white_answers_frame_img =  black_and_white_answers_frame_img[7:(h - 23), 7:(w - 5)]    
+
+    black_and_white_answers = split_rows_and_columns(black_and_white_answers_frame_img, rows_count, cols_count, ignore_first_column)
 
     return process_answers(black_and_white_answers, rows_count, cols_count)
 
@@ -177,11 +188,15 @@ def is_rectangle(contour):
     corners = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
     return len(corners) == 4
 
-def split_rows_and_columns(img, questions_count, choices_count):
+def split_rows_and_columns(img, questions_count, choices_count, ignore_first_column = False):
+    if ignore_first_column:
+        choices_count = choices_count + 1
     rows = np.vsplit(img, questions_count)
     options = []
     for r in rows:
         cols = np.hsplit(r, choices_count)
+        if ignore_first_column:
+            cols = cols[1:]
         for choice_option in cols:
             options.append(choice_option)
 
@@ -193,12 +208,12 @@ def reorder(contours):
     reordered = np.zeros((4, 1, 2), np.int32) # Initialize result with zeros
 
     sum = contours.sum(1)
-    reordered[0] = contours[np.argmin(sum)]  # bottom left
-    reordered[3] = contours[np.argmax(sum)]   # top right
+    reordered[0] = contours[np.argmin(sum)] # top left
+    reordered[3] = contours[np.argmax(sum)] # bottom right
 
     diff = np.diff(contours, axis=1)
-    reordered[1] = contours[np.argmin(diff)]  # bottom right
-    reordered[2] = contours[np.argmax(diff)] # top left
+    reordered[1] = contours[np.argmin(diff)] # top right
+    reordered[2] = contours[np.argmax(diff)] # bottom left
 
     return reordered
 
