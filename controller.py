@@ -6,7 +6,7 @@ width = 850
 height = 1210
 id_digits_options = 10
 ###
-# ["./images/p1.jpg", "./images/p2.jpg"]
+
 def process(exams = ["./images/p3.png"], correct_answers = [3, 1, 0, 1, 2, 3, 4, 3, 4, 0], choices_per_question_count = 5, id_digits_count = 9):
     id_digits_count += 1 # adiciona 1 row que será ignorada (header Matrícula)
     questions_count = len(correct_answers)
