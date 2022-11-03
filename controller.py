@@ -16,13 +16,7 @@ def process(exams = ["./images/p3.png"], correct_answers = [3, 1, 0, 1, 2, 3, 4,
     answers = list(map(lambda p: p[0], processed_exams))
     ids = list(map(lambda p: p[1][1:], processed_exams))
     print("exams_answers:", answers)
-    print("p1:", [0, 0, 1, 2, 3, 4, 4, 4, 1, 2])
-    print("p2:", [1, 0, 0, 1, 3, 2, 4, 1, 3, 0])
-    print("p3:", [0, 1, 2, 1, 4, 3, 2, 0, 3, 4])
     print("exams_ids:", ids)
-    print("p1-id:", [2, 1, 1, 2, 9, 0, 1, 6, 4])
-    print("p2-id:", [0, 2, 1, 3, 5, 8, 7, 9, 4])
-    print("p3-id:", [0, 1, 2, 3, 9, 8, 6, 7, 4])
 
     compared_answers = compare_exams_to_answers(answers, correct_answers)
     print("compared_answers:", compared_answers)
@@ -220,4 +214,4 @@ def reorder(contours):
 
     return reordered
 
-print(process())
+# print(process())
