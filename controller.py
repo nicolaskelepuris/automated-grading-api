@@ -7,7 +7,7 @@ height = 1210
 id_digits_options = 10
 ###
 
-def process(exams = ["./images/p3.png"], correct_answers = [3, 1, 0, 1, 2, 3, 4, 3, 4, 0], choices_per_question_count = 5, id_digits_count = 9):
+def process(exams = ["./images/p3.png"], correct_answers = [3, 1, 0, 1, 2, 3, 4, 3, 4, 0], choices_per_question_count = 5, id_digits_count = 9, question_weights = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]):
     id_digits_count += 1 # adiciona 1 row que será ignorada (header Matrícula)
     questions_count = len(correct_answers)
     print("correct_answers", correct_answers)
@@ -21,23 +21,16 @@ def process(exams = ["./images/p3.png"], correct_answers = [3, 1, 0, 1, 2, 3, 4,
     compared_answers = compare_exams_to_answers(answers, correct_answers)
     print("compared_answers:", compared_answers)
 
-    scores = calculate_scores(questions_count, compared_answers)
-    print("scores:", scores)
-
     compared_answers_and_ids = []
     for i, x in enumerate(compared_answers):
         compared_answers_and_ids.append({ "compared_answers": x, "id": ids[i] })
 
-    # cv2.waitKey(0)
-    return { "data": list(map(format_answers, compared_answers_and_ids)) }
+    return { "data": list(map(lambda exam: format_answers(exam, question_weights), compared_answers_and_ids)) }
 
-def calculate_scores(questions_count, compared_answers):
-    scores = list(map(lambda processed_exam: (sum(1 for i in range(0, len(processed_exam)) if processed_exam[i]) / questions_count) * 100, compared_answers))
-    return scores
-
-def format_answers(processed_exam):
+def format_answers(processed_exam, question_weights):
     return {
         "compared_answers": processed_exam["compared_answers"],
+        "score": (sum(question_weights[i] for i in range(0, len(processed_exam["compared_answers"])) if processed_exam["compared_answers"][i]) / sum(question_weights)) * 10,
         "correct_count": sum(1 for i in range(0, len(processed_exam["compared_answers"])) if processed_exam["compared_answers"][i]),
         "id": processed_exam["id"]
     }
